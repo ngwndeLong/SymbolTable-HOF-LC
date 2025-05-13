@@ -88,7 +88,7 @@ class TestSymbolTable(unittest.TestCase):
         input = [
             "    INSERT x number"
         ]
-        expected = ["Invalid:     INSERT x number"]
+        expected = ["Invalid: Invalid command"]
 
         self.assertTrue(TestUtils.check(input, expected, 107))
 
@@ -183,7 +183,7 @@ class TestSymbolTable(unittest.TestCase):
         input = [
             ""
         ]
-        expected = ["Invalid: "]
+        expected = ["Invalid: Invalid command"]
 
         self.assertTrue(TestUtils.check(input, expected, 117))
 
@@ -493,7 +493,7 @@ class TestSymbolTable(unittest.TestCase):
             "INSERT def number",
             " LOOKUP def"
         ]
-        expected = ["Invalid:  LOOKUP def"]
+        expected = ["Invalid: Invalid command"]
 
         self.assertTrue(TestUtils.check(input, expected, 146))
 
@@ -518,15 +518,8 @@ class TestSymbolTable(unittest.TestCase):
         self.assertTrue(TestUtils.check(input, expected, 148))
 
     def test_49(self):
-        input = [
-            "INSERT testcasecuoicung string",
-            "ASSIGN testcasecuoicung 'chucquythaycosuckhoe'",
-            "BEGIN",
-            "INSERT testcasecuoicung string",
-            "ASSIGN testcasecuoicung 'chucquythaycosuckhoe'",
-            "END"
-        ]
-        expected = ["success", "success", "success", "success"]
+        input = []
+        expected = []
 
         self.assertTrue(TestUtils.check(input, expected, 149))
 

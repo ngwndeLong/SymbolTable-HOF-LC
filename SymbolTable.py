@@ -18,11 +18,6 @@ def simulate(list_of_commands):
     def valid_id(name):
         return (len(name) > 0 and name[0].islower() and all(i.isalnum() or i == '_' for i in name))
     
-    def parse(cmd):
-        if cmd.strip() != cmd: raise InvalidInstruction(cmd)
-        if any(i == '' for i in cmd.split(' ')): raise InvalidInstruction(cmd)
-        return cmd.split(' ')
-    
     def insert(cmd, parts, scopes):
         if not valid_id(parts[1]) or parts[2] not in {"number", "string"}: raise InvalidInstruction(cmd)
         if parts[1] in scopes[-1]: raise Redeclared(cmd)
@@ -30,19 +25,16 @@ def simulate(list_of_commands):
     
     def assign(cmd, parts, scopes):
         if not valid_id(parts[1]): raise InvalidInstruction(cmd)
-        lhs = find(parts[1], scopes)
-        if not lhs: raise Undeclared(cmd)
-        rhs = parts[2]   
-        if rhs.isdigit():
-            if lhs[1] != "number": raise TypeMismatch(cmd)
-        elif len(rhs) >= 2 and rhs[0] == "'" and rhs[-1] == "'" and all(i.isalnum() for i in rhs[1:-1]):
-            if lhs[1] != "string": raise TypeMismatch(cmd)
-        elif valid_id(rhs):
-            rhs_found = find(rhs, scopes)
-            if not rhs_found: raise Undeclared(cmd)
-            if lhs[1] != rhs_found[1]: raise TypeMismatch(cmd)
+        if not find(parts[1], scopes): raise Undeclared(cmd)
+        if parts[2].isdigit():
+            if find(parts[1], scopes)[1] != "number": raise TypeMismatch(cmd)
+        elif len(parts[2]) >= 2 and parts[2][0] == "'" and parts[2][-1] == "'" and all(i.isalnum() for i in parts[2][1:-1]):
+            if find(parts[1], scopes)[1] != "string": raise TypeMismatch(cmd)
+        elif valid_id(parts[2]):
+            if not find(parts[2], scopes): raise Undeclared(cmd)
+            if find(parts[1], scopes)[1] != find(parts[2], scopes)[1]: raise TypeMismatch(cmd)
         else: raise InvalidInstruction(cmd)
-        return scopes[:-1] + [{**scopes[-1], parts[1]: rhs}], "success"
+        return scopes[:-1] + [{**scopes[-1], parts[1]: parts[2]}], "success"
     
     def begin(scopes):
         return scopes + [{}], None
@@ -53,13 +45,11 @@ def simulate(list_of_commands):
     
     def lookup(cmd, parts, scopes):
         if not valid_id(parts[1]): raise InvalidInstruction(cmd)
-        found = find(parts[1], scopes)
-        if not found: raise Undeclared(cmd)
-        return scopes, str(found[0])
+        if not find(parts[1], scopes): raise Undeclared(cmd)
+        return scopes, str(find(parts[1], scopes)[0])
 
     def p_print(scopes):
-        sorted_vars = sorted(reduce(lambda acc, curr: acc if any(curr[0] == x[0] for x in acc) else acc + [curr], list((name, level) for level, scope in list(reversed(list(enumerate(scopes)))) for name in scope), []), key = lambda x: (x[1], list((name, level) for level, scope in list(reversed(list(enumerate(scopes)))) for name in scope).index(x)))
-        return scopes, " ".join(f"{name}//{level}" for name, level in sorted_vars)
+        return scopes, " ".join(f"{name}//{level}" for name, level in sorted(reduce(lambda acc, curr: acc if any(curr[0] == x[0] for x in acc) else acc + [curr], list((name, level) for level, scope in list(reversed(list(enumerate(scopes)))) for name in scope), []), key = lambda x: (x[1], list((name, level) for level, scope in list(reversed(list(enumerate(scopes)))) for name in scope).index(x))))
     
     def r_print(scopes):
         return scopes, " ".join(f"{name}//{level}" for name, level in reduce(lambda acc, curr: acc if any(curr[0] == x[0] for x in acc) else acc + [curr], list((name, level) for level, scope in list(reversed(list(enumerate(scopes)))) for name in reversed(scope)), []))
@@ -86,13 +76,12 @@ def simulate(list_of_commands):
         elif parts[0] == "RPRINT":
             if len(parts) != 1: raise InvalidInstruction(cmd)
             return r_print(scopes)
-        else: raise InvalidInstruction(cmd)
+        else: raise InvalidInstruction("Invalid command")
         
     def step(acc, cmd):
         current_output, current_scopes = acc
         try:
-            parts = parse(cmd)
-            new_scopes, output = dispatch(cmd, parts, current_scopes)
+            new_scopes, output = dispatch(cmd, cmd.split(' '), current_scopes)
             return (current_output + [output], new_scopes)
         except StaticError as e: raise e
 
